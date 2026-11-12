@@ -2,7 +2,7 @@
 // Estratégia "rede primeiro": online sempre pega a versão nova (e atualiza a cópia);
 // offline (ou rede lenta) usa a cópia guardada.
 
-const CACHE = 'mzk-shell-v2';
+const CACHE = 'mzk-shell-v3';
 const NETWORK_TIMEOUT_MS = 3000;
 
 // Tudo que o app precisa para abrir offline. (test/sw.test.js confere esta lista.)

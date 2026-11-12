@@ -31,12 +31,48 @@ export class AudioEngine {
       this.noise = this.#noiseBuffer();
       this.previewBus = this.#makeBus();
     }
-    if (this.ctx.state !== 'running') this.ctx.resume();
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    this.#silentAudioElement();
     // Buffer silencioso: no iOS, garante que o contexto "acorde" neste gesto.
     const src = this.ctx.createBufferSource();
     src.buffer = this.ctx.createBuffer(1, 1, 22050);
     src.connect(this.ctx.destination);
     src.start(0);
+  }
+
+  /**
+   * iPhone: tocar um <audio> (silencioso, em loop) dentro de um gesto põe a sessão de
+   * áudio no modo "mídia", então o Web Audio soa mesmo com o silencioso ligado e em
+   * iOS sem navigator.audioSession (antes do 17). Só no iOS; tenta de novo até pegar.
+   */
+  #silentAudioElement() {
+    if (this.silentEl?.playing) return;
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!ios) return;
+    if (!this.silentEl) {
+      // WAV mono 8 kHz, 8 bits, 0,5 s de silêncio (valor 128).
+      const n = 4000;
+      const b = new Uint8Array(44 + n);
+      const v = new DataView(b.buffer);
+      const str = (o, s) => [...s].forEach((c, i) => { b[o + i] = c.charCodeAt(0); });
+      str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVEfmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+      v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+      str(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+      const el = document.createElement('audio');
+      el.src = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+      el.loop = true;
+      el.setAttribute('playsinline', '');
+      el.setAttribute('x-webkit-airplay', 'deny');
+      el.preload = 'auto';
+      this.silentEl = { el, playing: false };
+      el.addEventListener('pause', () => { this.silentEl.playing = false; });
+    }
+    const s = this.silentEl;
+    const p = s.el.play();
+    if (p) p.then(() => { s.playing = true; }).catch(() => {});
   }
 
   get ready() {
