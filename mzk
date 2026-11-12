@@ -1,0 +1,202 @@
+#!/usr/bin/env node
+// MZK Composer — linha de comando (Linux).
+// Uso: ./mzk build <MZK-0042 | arquivo.json>... [--all] [--dir D] [--out D] [--registrar] [--no-pdf]
+
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createServer } from 'node:http';
+import { homedir, networkInterfaces } from 'node:os';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildMidi } from './src/core/midi.js';
+import { buildLilypond } from './src/core/lilypond.js';
+import { fileBaseName, validateProject } from './src/core/project.js';
+
+const HELP = `MZK Composer
+
+  ./mzk build MZK-0042             gera .mid, .ly e .pdf de um projeto
+  ./mzk build caminho/projeto.json  idem, a partir de um arquivo
+  ./mzk build --all                todos os projetos do diretório
+  ./mzk serve [--port 8080]        abre o app no navegador (e no iPhone, na mesma rede Wi-Fi)
+
+Opções:
+  --dir <pasta>     onde ficam os .json (padrão: $MZK_DIR ou ~/Muzeka/composicoes/projects)
+  --out <pasta>     onde gravar (padrão: pasta "exports" ao lado da pasta do projeto)
+  --registrar       faz commit dos arquivos gerados e envia ao GitHub (prova datada)
+  --no-pdf          não chama o LilyPond (gera só .mid e .ly)
+  --no-pull         não busca as versões novas do GitHub antes de gerar
+`;
+
+function parseArgs(argv) {
+  const opts = { targets: [], all: false, dir: null, out: null, registrar: false, pdf: true, pull: true };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--all') opts.all = true;
+    else if (a === '--registrar') opts.registrar = true;
+    else if (a === '--no-pdf') opts.pdf = false;
+    else if (a === '--no-pull') opts.pull = false;
+    else if (a === '--dir') opts.dir = argv[++i];
+    else if (a === '--out') opts.out = argv[++i];
+    else if (a.startsWith('--')) throw new Error(`Opção desconhecida: ${a}`);
+    else opts.targets.push(a);
+  }
+  return opts;
+}
+
+function projectsDir(opts) {
+  return resolve(opts.dir || process.env.MZK_DIR || join(homedir(), 'Muzeka', 'composicoes', 'projects'));
+}
+
+function resolveTarget(target, dir) {
+  if (target.endsWith('.json') || existsSync(target)) {
+    if (!existsSync(target)) throw new Error(`Arquivo não encontrado: ${target}`);
+    return resolve(target);
+  }
+  if (!existsSync(dir)) throw new Error(`Diretório de projetos não existe: ${dir} (use --dir)`);
+  const matches = readdirSync(dir).filter((f) => f.endsWith('.json') && (f === `${target}.json` || f.startsWith(`${target}_`)));
+  if (!matches.length) throw new Error(`Projeto ${target} não encontrado em ${dir}`);
+  if (matches.length > 1) throw new Error(`Mais de um arquivo para ${target}: ${matches.join(', ')}`);
+  return join(dir, matches[0]);
+}
+
+function run(cmd, args, cwd) {
+  return spawnSync(cmd, args, { cwd, encoding: 'utf8' });
+}
+
+function buildOne(jsonPath, opts) {
+  const project = JSON.parse(readFileSync(jsonPath, 'utf8'));
+  const errors = validateProject(project);
+  if (errors.length) throw new Error(`${basename(jsonPath)} é inválido:\n  - ${errors.join('\n  - ')}`);
+
+  const outDir = resolve(opts.out || join(dirname(dirname(jsonPath)), 'exports'));
+  mkdirSync(outDir, { recursive: true });
+  const base = fileBaseName(project);
+  const files = [];
+
+  const midPath = join(outDir, `${base}.mid`);
+  writeFileSync(midPath, buildMidi(project));
+  files.push(midPath);
+
+  const lyPath = join(outDir, `${base}.ly`);
+  writeFileSync(lyPath, buildLilypond(project));
+  files.push(lyPath);
+
+  if (opts.pdf) {
+    const r = run('lilypond', ['-l', 'WARN', '-o', base, `${base}.ly`], outDir);
+    if (r.error) console.warn('  ! LilyPond não encontrado — PDF não gerado (sudo apt install lilypond).');
+    else if (r.status !== 0) throw new Error(`LilyPond falhou para ${base}.ly:\n${r.stderr}`);
+    else files.push(join(outDir, `${base}.pdf`));
+    if (r.stderr && r.status === 0) process.stderr.write(r.stderr);
+  }
+
+  console.log(`✓ ${project.meta.id} — ${project.meta.title}`);
+  for (const f of files) console.log(`    ${relative(process.cwd(), f) || f}`);
+  return { project, files, outDir };
+}
+
+function registrar({ project, files, outDir }) {
+  const top = run('git', ['rev-parse', '--show-toplevel'], outDir);
+  if (top.status !== 0) throw new Error(`--registrar: ${outDir} não está dentro de um repositório git.`);
+  const add = run('git', ['add', '--', ...files], outDir);
+  if (add.status !== 0) throw new Error(`git add falhou:\n${add.stderr}`);
+  const msg = `Registro: ${project.meta.id} — ${project.meta.title}`;
+  const commit = run('git', ['commit', '-m', msg, '--', ...files], outDir);
+  if (commit.status !== 0) {
+    if (/nothing to commit|nada a submeter/i.test(commit.stdout + commit.stderr)) {
+      console.log('    (sem mudanças desde o último registro)');
+      return;
+    }
+    throw new Error(`git commit falhou:\n${commit.stderr || commit.stdout}`);
+  }
+  const push = run('git', ['push'], outDir);
+  if (push.status !== 0) {
+    console.warn(`    registrado só neste computador (git push falhou):\n${push.stderr.trim()}`);
+    return;
+  }
+  console.log(`    registrado e enviado ao GitHub: "${msg}"`);
+}
+
+/** Se a pasta de projetos é um clone git, busca as versões novas (iPhone → GitHub → aqui). */
+function pullProjects(dir) {
+  if (!existsSync(dir)) return;
+  if (run('git', ['rev-parse', '--is-inside-work-tree'], dir).status !== 0) return;
+  if (!run('git', ['remote'], dir).stdout.trim()) return;
+  process.stdout.write('Buscando versões novas no GitHub… ');
+  const r = run('git', ['pull', '--ff-only', '--quiet'], dir);
+  console.log(r.status === 0 ? 'ok' : `não deu (${(r.stderr || '').trim().split('\n')[0]}) — seguindo com o que há aqui`);
+}
+
+const ROOT = dirname(fileURLToPath(import.meta.url));
+const MIME = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.mid': 'audio/midi', '.pdf': 'application/pdf',
+};
+
+function serve(args) {
+  const i = args.indexOf('--port');
+  const port = i >= 0 ? Number(args[i + 1]) : 8080;
+  const server = createServer((req, res) => {
+    const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    let file = resolve(ROOT, `.${url}`);
+    if (file !== ROOT && !file.startsWith(ROOT + sep)) { res.writeHead(403).end(); return; }
+    if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
+    if (!existsSync(file) || /(^|[/\\])\.(?!well-known)/.test(relative(ROOT, file))) { res.writeHead(404).end('404'); return; }
+    res.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    res.end(readFileSync(file));
+  });
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`MZK Composer rodando:\n  neste computador:  http://localhost:${port}`);
+    for (const list of Object.values(networkInterfaces())) {
+      for (const a of list || []) {
+        if (a.family === 'IPv4' && !a.internal) console.log(`  no iPhone (mesmo Wi-Fi): http://${a.address}:${port}`);
+      }
+    }
+    console.log('Ctrl+C para parar.');
+  });
+  return new Promise(() => {});
+}
+
+function main() {
+  const [cmd, ...rest] = process.argv.slice(2);
+  if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
+    console.log(HELP);
+    return 0;
+  }
+  if (cmd === 'serve') return serve(rest);
+  if (cmd !== 'build') {
+    console.error(`Comando desconhecido: ${cmd}\n\n${HELP}`);
+    return 2;
+  }
+  const opts = parseArgs(rest);
+  const dir = projectsDir(opts);
+  if (opts.pull) pullProjects(dir);
+  let paths;
+  if (opts.all) {
+    if (!existsSync(dir)) throw new Error(`Diretório de projetos não existe: ${dir} (use --dir)`);
+    paths = readdirSync(dir).filter((f) => f.endsWith('.json')).sort().map((f) => join(dir, f));
+  } else {
+    if (!opts.targets.length) throw new Error('Informe um ID (MZK-0042), um arquivo .json ou --all.');
+    paths = opts.targets.map((t) => resolveTarget(t, dir));
+  }
+
+  let failures = 0;
+  for (const p of paths) {
+    try {
+      const result = buildOne(p, opts);
+      if (opts.registrar) registrar(result);
+    } catch (e) {
+      failures++;
+      console.error(`✗ ${e.message}`);
+    }
+  }
+  return failures ? 1 : 0;
+}
+
+try {
+  const code = main();
+  if (typeof code === 'number') process.exitCode = code;
+} catch (e) {
+  console.error(`✗ ${e.message}`);
+  process.exitCode = 2;
+}

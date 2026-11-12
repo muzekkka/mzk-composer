@@ -1,0 +1,1155 @@
+{
+  "schema": 1,
+  "meta": {
+    "id": "MZK-0001",
+    "title": "Exemplo de Canção",
+    "composers": [
+      "Leo Santos"
+    ],
+    "year": 2026,
+    "copyright": "",
+    "notes": "Projeto de exemplo para testar o pipeline."
+  },
+  "settings": {
+    "bpm": 92,
+    "key": {
+      "tonic": "A",
+      "mode": "minor"
+    },
+    "timeSignature": [
+      4,
+      4
+    ],
+    "lead2Name": "Sax"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "name": "Intro",
+      "bars": 4,
+      "lead": [],
+      "lead2": [
+        {
+          "pos": 0,
+          "dur": 2,
+          "pitch": 69
+        },
+        {
+          "pos": 2,
+          "dur": 2,
+          "pitch": 72
+        },
+        {
+          "pos": 4,
+          "dur": 2,
+          "pitch": 76
+        },
+        {
+          "pos": 6,
+          "dur": 10,
+          "pitch": 79
+        },
+        {
+          "pos": 16,
+          "dur": 8,
+          "pitch": 76
+        },
+        {
+          "pos": 24,
+          "dur": 8,
+          "pitch": 72
+        },
+        {
+          "pos": 32,
+          "dur": 4,
+          "pitch": 74
+        },
+        {
+          "pos": 36,
+          "dur": 4,
+          "pitch": 77
+        },
+        {
+          "pos": 40,
+          "dur": 8,
+          "pitch": 81
+        },
+        {
+          "pos": 48,
+          "dur": 12,
+          "pitch": 80
+        }
+      ],
+      "chords": [
+        {
+          "pos": 0,
+          "symbol": "Am7"
+        },
+        {
+          "pos": 16,
+          "symbol": "Fmaj7"
+        },
+        {
+          "pos": 32,
+          "symbol": "Dm7(9)"
+        },
+        {
+          "pos": 40,
+          "symbol": "G7sus4"
+        },
+        {
+          "pos": 48,
+          "symbol": "E7(b9)"
+        }
+      ],
+      "bass": [
+        {
+          "pos": 0,
+          "dur": 16,
+          "pitch": 45
+        },
+        {
+          "pos": 16,
+          "dur": 16,
+          "pitch": 41
+        },
+        {
+          "pos": 32,
+          "dur": 8,
+          "pitch": 38
+        },
+        {
+          "pos": 40,
+          "dur": 8,
+          "pitch": 43
+        },
+        {
+          "pos": 48,
+          "dur": 16,
+          "pitch": 40
+        }
+      ],
+      "drums": [
+        {
+          "pos": 0,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 8,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 10,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 0,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 2,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 6,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 8,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 10,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 14,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 16,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 24,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 26,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 16,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 18,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 22,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 24,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 26,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 30,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 32,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 40,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 42,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 32,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 34,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 38,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 40,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 42,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 46,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 48,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 56,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 58,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 48,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 50,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 54,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 56,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 58,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 62,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 0,
+          "piece": "crash",
+          "accent": true
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "name": "A",
+      "bars": 4,
+      "lead": [
+        {
+          "pos": 0,
+          "dur": 4,
+          "pitch": 76
+        },
+        {
+          "pos": 4,
+          "dur": 2,
+          "pitch": 72
+        },
+        {
+          "pos": 6,
+          "dur": 2,
+          "pitch": 74
+        },
+        {
+          "pos": 8,
+          "dur": 8,
+          "pitch": 76
+        },
+        {
+          "pos": 16,
+          "dur": 4,
+          "pitch": 77
+        },
+        {
+          "pos": 20,
+          "dur": 2,
+          "pitch": 76
+        },
+        {
+          "pos": 22,
+          "dur": 6,
+          "pitch": 74
+        },
+        {
+          "pos": 32,
+          "dur": 8,
+          "pitch": 71
+        },
+        {
+          "pos": 40,
+          "dur": 4,
+          "pitch": 74
+        },
+        {
+          "pos": 44,
+          "dur": 4,
+          "pitch": 67
+        },
+        {
+          "pos": 48,
+          "dur": 12,
+          "pitch": 72
+        }
+      ],
+      "lead2": [],
+      "chords": [
+        {
+          "pos": 0,
+          "symbol": "Am7"
+        },
+        {
+          "pos": 16,
+          "symbol": "Dm7"
+        },
+        {
+          "pos": 32,
+          "symbol": "G7"
+        },
+        {
+          "pos": 48,
+          "symbol": "C7M(9)/E"
+        }
+      ],
+      "bass": [
+        {
+          "pos": 0,
+          "dur": 16,
+          "pitch": 45
+        },
+        {
+          "pos": 16,
+          "dur": 16,
+          "pitch": 38
+        },
+        {
+          "pos": 32,
+          "dur": 16,
+          "pitch": 43
+        },
+        {
+          "pos": 48,
+          "dur": 16,
+          "pitch": 40
+        }
+      ],
+      "drums": [
+        {
+          "pos": 0,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 8,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 10,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 0,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 2,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 6,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 8,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 10,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 14,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 16,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 24,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 26,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 16,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 18,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 22,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 24,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 26,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 30,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 32,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 40,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 42,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 32,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 34,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 38,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 40,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 42,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 46,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 48,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 56,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 58,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 48,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 50,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 54,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 56,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 58,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 62,
+          "piece": "hhOpen",
+          "accent": false
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "name": "B",
+      "bars": 4,
+      "lead": [
+        {
+          "pos": 0,
+          "dur": 4,
+          "pitch": 69
+        },
+        {
+          "pos": 4,
+          "dur": 4,
+          "pitch": 72
+        },
+        {
+          "pos": 8,
+          "dur": 8,
+          "pitch": 77
+        },
+        {
+          "pos": 16,
+          "dur": 6,
+          "pitch": 76
+        },
+        {
+          "pos": 22,
+          "dur": 2,
+          "pitch": 74
+        },
+        {
+          "pos": 24,
+          "dur": 8,
+          "pitch": 73
+        },
+        {
+          "pos": 32,
+          "dur": 4,
+          "pitch": 74
+        },
+        {
+          "pos": 36,
+          "dur": 4,
+          "pitch": 77
+        },
+        {
+          "pos": 40,
+          "dur": 8,
+          "pitch": 81
+        },
+        {
+          "pos": 48,
+          "dur": 16,
+          "pitch": 68
+        }
+      ],
+      "lead2": [],
+      "chords": [
+        {
+          "pos": 0,
+          "symbol": "F7M"
+        },
+        {
+          "pos": 16,
+          "symbol": "Em7"
+        },
+        {
+          "pos": 24,
+          "symbol": "A7"
+        },
+        {
+          "pos": 32,
+          "symbol": "Dm7"
+        },
+        {
+          "pos": 40,
+          "symbol": "G7(4)"
+        },
+        {
+          "pos": 48,
+          "symbol": "E7(#9)"
+        },
+        {
+          "pos": 60,
+          "symbol": "N.C."
+        }
+      ],
+      "bass": [
+        {
+          "pos": 0,
+          "dur": 16,
+          "pitch": 41
+        },
+        {
+          "pos": 16,
+          "dur": 8,
+          "pitch": 40
+        },
+        {
+          "pos": 24,
+          "dur": 8,
+          "pitch": 45
+        },
+        {
+          "pos": 32,
+          "dur": 8,
+          "pitch": 38
+        },
+        {
+          "pos": 40,
+          "dur": 8,
+          "pitch": 43
+        },
+        {
+          "pos": 48,
+          "dur": 12,
+          "pitch": 40
+        }
+      ],
+      "drums": [
+        {
+          "pos": 0,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 8,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 10,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 0,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 2,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 4,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 6,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 8,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 10,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 12,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 14,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 16,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 24,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 26,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 16,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 18,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 20,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 22,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 24,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 26,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 28,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 30,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 32,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 40,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 42,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 32,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 34,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 36,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 38,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 40,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 42,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 44,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 46,
+          "piece": "hhOpen",
+          "accent": false
+        },
+        {
+          "pos": 48,
+          "piece": "kick",
+          "accent": true
+        },
+        {
+          "pos": 56,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 58,
+          "piece": "kick",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "snare",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "snare",
+          "accent": true
+        },
+        {
+          "pos": 48,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 50,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 52,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 54,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 56,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 58,
+          "piece": "hhClosed",
+          "accent": false
+        },
+        {
+          "pos": 60,
+          "piece": "hhClosed",
+          "accent": true
+        },
+        {
+          "pos": 62,
+          "piece": "hhOpen",
+          "accent": false
+        }
+      ]
+    }
+  ],
+  "arrangement": [
+    "intro",
+    "a",
+    "a",
+    "b",
+    "a"
+  ]
+}

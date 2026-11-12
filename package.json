@@ -1,0 +1,12 @@
+{
+  "name": "mzk-composer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Caderno de rascunhos musicais da Muzeka: projeto JSON → MIDI + lead sheet (LilyPond).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build:example": "./mzk build examples/MZK-0001_exemplo.json"
+  },
+  "engines": { "node": ">=20" }
+}
