@@ -132,7 +132,7 @@ def report(levels, active, cuts=None, step_s=30):
     return rows
 
 
-def polish(src, dst, level, verbose=True):
+def polish(src, dst, level, cover=None):
     cfg = LEVELS[level]
     x = decode(src)
     specs = []
@@ -167,9 +167,11 @@ def polish(src, dst, level, verbose=True):
         js = json.loads(re.findall(r"\{[\s\S]*?\}", m.stderr)[-1])
         ln = (f"loudnorm={LOUDNESS}:linear=true:measured_I={js['input_i']}:measured_TP={js['input_tp']}"
               f":measured_LRA={js['input_lra']}:measured_thresh={js['input_thresh']}:offset={js['target_offset']}")
-        # Mantém capa e etiquetas do original; acrescenta um comentário.
-        cmd = ["ffmpeg", "-v", "error", "-y", "-i", wav, "-i", src,
-               "-map", "0:a", "-map", "1:v?", "-c:v", "copy", "-map_metadata", "1",
+        # Mantém as etiquetas do original; a capa vira a da Muzeka (ou a do original, se
+        # não houver capa configurada).
+        art = ["-i", cover, "-map", "0:a", "-map", "2:v", "-c:v", "mjpeg", "-disposition:v", "attached_pic",
+               "-metadata:s:v", "title=Muzeka", "-metadata:s:v", "comment=Cover (front)"] if cover else ["-map", "0:a", "-map", "1:v?", "-c:v", "copy"]
+        cmd = ["ffmpeg", "-v", "error", "-y", "-i", wav, "-i", src, *art, "-map_metadata", "1",
                "-metadata", f"comment=polido MZK ({level})",
                "-af", f"{chain},{ln},aresample=44100", "-c:a", "libmp3lame", "-b:a", "320k", "-id3v2_version", "3", dst]
         r = run(cmd)
@@ -204,6 +206,8 @@ def main():
     ap.add_argument("--nivel", choices=list(LEVELS), default="medio")
     ap.add_argument("--radio", default=os.path.expanduser("~/Muzeka/radio"))
     ap.add_argument("--originais", default=os.path.expanduser("~/Muzeka/originais-suno"))
+    ap.add_argument("--capa", default=os.path.expanduser("~/Muzeka/capa-muzeka.jpg"),
+                    help="imagem da capa (padrão: ~/Muzeka/capa-muzeka.jpg; se não existir, mantém a do Suno)")
     ap.add_argument("--json", action="store_true", help="relatório em JSON")
     a = ap.parse_args()
 
@@ -218,7 +222,8 @@ def main():
             os.makedirs(os.path.dirname(out), exist_ok=True)
             if not os.path.exists(original):
                 shutil.copy2(f, original)
-            before, after = polish(original, out + ".tmp.mp3", a.nivel)
+            cover = a.capa if a.capa and os.path.isfile(a.capa) else None
+            before, after = polish(original, out + ".tmp.mp3", a.nivel, cover)
             os.replace(out + ".tmp.mp3", out)
             if a.json:
                 print(json.dumps({"file": out, "antes": before, "depois": after}, ensure_ascii=False))

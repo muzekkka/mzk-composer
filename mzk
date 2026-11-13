@@ -23,7 +23,7 @@ const HELP = `MZK Composer
   ./mzk render --all               idem, para todos os projetos
   ./mzk polir "Muzeka - Gênero - Título.mp3"...
                                    trata faixas do Suno (sibilância, agudo que piora com o tempo,
-                                   volume) e salva em ~/Muzeka/radio/<Gênero>/; o original fica
+                                   volume, capa da Muzeka) e salva em ~/Muzeka/radio/<Gênero>/; o original fica
                                    em ~/Muzeka/originais-suno/. Níveis: --suave, --medio (padrão), --forte
   ./mzk serve [--port 8080]        abre o app no navegador (e no iPhone, na mesma rede Wi-Fi)
 

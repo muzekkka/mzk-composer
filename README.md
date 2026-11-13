@@ -98,7 +98,8 @@ Trata a faixa baixada do Suno: mede a sibilância (5–10 kHz) e o "ar" (10–16
 longo da música, usa a parte boa da própria faixa como referência e abaixa só o
 excesso (o agudo que o Suno vai piorando depois de uns 2 minutos); um de-esser leve
 pega os picos e o volume vai a −14 LUFS. Níveis: `--suave`, `--medio` (padrão),
-`--forte`. O nome precisa seguir `Muzeka - Gênero - Título.mp3`.
+`--forte`. A capa do Suno é trocada pela da Muzeka (`~/Muzeka/capa-muzeka.jpg`; outra com
+`--capa imagem.jpg`). O nome precisa seguir `Muzeka - Gênero - Título.mp3`.
 
 - Resultado: `~/Muzeka/radio/<Gênero>/` (a pasta espelho do AzuraCast).
 - Original: `~/Muzeka/originais-suno/<Gênero>/`, nunca alterado. Rodar de novo parte
