@@ -107,6 +107,22 @@ export function plan(locals, remoteFiles, manifest, { polished = isPolished, has
   return todo;
 }
 
+/**
+ * Playlists para uma faixa nova: as mesmas das outras faixas da pasta na rádio (a mais
+ * comum). Na API do AzuraCast, arquivo novo chega sem playlist e não toca.
+ */
+export function playlistsFor(path, remoteFiles) {
+  const dir = path.slice(0, path.indexOf('/') + 1);
+  const count = new Map();
+  for (const f of remoteFiles) {
+    if (!f.path.startsWith(dir) || !f.playlists?.length) continue;
+    const key = f.playlists.map((p) => p.id).sort((a, b) => a - b).join(',');
+    count.set(key, (count.get(key) || 0) + 1);
+  }
+  const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
+  return best ? best[0].split(',').map(Number) : [];
+}
+
 async function api(cfg, method, path, body) {
   const res = await fetch(`${cfg.url}/api${path}`, {
     method,
@@ -135,7 +151,7 @@ export async function publicar(args) {
 
   process.stdout.write('Lendo a lista de arquivos da rádio… ');
   const files = await api(cfg, 'GET', `/station/${cfg.station}/files`);
-  const remoteFiles = files.filter((f) => f.path).map((f) => ({ path: f.path, length: f.length }));
+  const remoteFiles = files.filter((f) => f.path).map((f) => ({ path: f.path, length: f.length, playlists: f.playlists }));
   console.log(`${remoteFiles.length} arquivos.`);
 
   const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
@@ -176,6 +192,15 @@ export async function publicar(args) {
     try {
       const file = readFileSync(t.full).toString('base64');
       await api(cfg, 'POST', `/station/${cfg.station}/files`, { path: t.path, file });
+      if (!t.replace) {
+        const ids = playlistsFor(t.path, remoteFiles);
+        if (ids.length) {
+          await api(cfg, 'PUT', `/station/${cfg.station}/files/batch`, { do: 'playlist', files: [t.path], dirs: [], playlists: ids, currentDirectory: '' });
+          process.stdout.write('(na playlist) ');
+        } else {
+          process.stdout.write('(sem playlist: escolha no painel) ');
+        }
+      }
       manifest[nfc(t.rel)] = t.hash;
       writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
       ok++;

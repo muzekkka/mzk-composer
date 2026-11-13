@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { matchRemote, plan, readEnv } from '../src/cli/publicar.js';
+import { matchRemote, plan, playlistsFor, readEnv } from '../src/cli/publicar.js';
 
 const MZK = fileURLToPath(new URL('../mzk', import.meta.url));
 
@@ -40,6 +40,18 @@ test('correspondência exige título parecido e duração quase igual', () => {
   assert.equal(matchRemote('Lounge/Muzeka - Lounge - Store.mp3', 160, remote, new Set()), null);
   assert.equal(matchRemote('Lounge/Muzeka - Lounge - Outra.mp3', 150, remote, new Set()), null);
   assert.equal(matchRemote('Lo-Fi/Muzeka - Lounge - Store.mp3', 150, remote, new Set()), null);
+});
+
+test('faixa nova entra nas playlists mais comuns da pasta', () => {
+  const remote = [
+    { path: 'Lounge/a.mp3', playlists: [{ id: 1 }] },
+    { path: 'Lounge/b.mp3', playlists: [{ id: 1 }] },
+    { path: 'Lounge/c.mp3', playlists: [{ id: 4 }, { id: 1 }] },
+    { path: 'Spots/s.mp3', playlists: [{ id: 2 }] },
+  ];
+  assert.deepEqual(playlistsFor('Lounge/nova.mp3', remote), [1]);
+  assert.deepEqual(playlistsFor('Spots/novo.mp3', remote), [2]);
+  assert.deepEqual(playlistsFor('Vazia/x.mp3', remote), []);
 });
 
 test('readEnv lê o formato do assistente', () => {
