@@ -167,11 +167,13 @@ def polish(src, dst, level, cover=None):
         js = json.loads(re.findall(r"\{[\s\S]*?\}", m.stderr)[-1])
         ln = (f"loudnorm={LOUDNESS}:linear=true:measured_I={js['input_i']}:measured_TP={js['input_tp']}"
               f":measured_LRA={js['input_lra']}:measured_thresh={js['input_thresh']}:offset={js['target_offset']}")
-        # Mantém as etiquetas do original; a capa vira a da Muzeka (ou a do original, se
-        # não houver capa configurada).
+        # Mantém as etiquetas do original, menos artista e título, que saem do nome do arquivo
+        # (o "Tocando agora" da rádio mostra "artista - título" = "Muzeka - Ritmo - Título").
+        # A capa vira a da Muzeka (ou a do original, se não houver capa configurada).
         art = ["-i", cover, "-map", "0:a", "-map", "2:v", "-c:v", "mjpeg", "-disposition:v", "attached_pic",
                "-metadata:s:v", "title=Muzeka", "-metadata:s:v", "comment=Cover (front)"] if cover else ["-map", "0:a", "-map", "1:v?", "-c:v", "copy"]
         cmd = ["ffmpeg", "-v", "error", "-y", "-i", wav, "-i", src, *art, "-map_metadata", "1",
+               *tag_args(os.path.basename(src)),
                "-metadata", f"comment=polido MZK ({level})",
                "-af", f"{chain},{ln},aresample=44100", "-c:a", "libmp3lame", "-b:a", "320k", "-id3v2_version", "3", dst]
         r = run(cmd)
@@ -183,6 +185,14 @@ def polish(src, dst, level, cover=None):
 
 
 GENRE_RE = re.compile(r"^Muzeka - (?P<genre>.+?) - (?P<title>.+)\.mp3$", re.I)
+
+
+def tag_args(name):
+    """Etiquetas a partir do nome "Muzeka - Ritmo - Título.mp3": artista Muzeka, título "Ritmo - Título"."""
+    m = GENRE_RE.match(name)
+    if not m:
+        return []
+    return ["-metadata", "artist=Muzeka", "-metadata", f"title={m.group('genre')} - {m.group('title')}"]
 
 
 def targets(path, radio, originals):

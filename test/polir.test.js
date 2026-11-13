@@ -55,3 +55,26 @@ test('polir: faixa já na pasta da rádio fica na própria pasta, mesmo se o nom
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('polir: etiquetas seguem o nome do arquivo (artista Muzeka, título "Ritmo - Título")', { skip: !ready && 'sem ffmpeg/numpy' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mzk-polir-'));
+  try {
+    // O Suno entrega etiquetas de outra coisa (título genérico, usuário como artista).
+    const src = join(dir, 'Muzeka - Forró - Que Dia, Que Dia.mp3');
+    const gen = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'sine=f=220:d=8', '-ac', '2',
+      '-metadata', 'title=Country Rock Lounge (Cm7-Abmaj7-Fm7-G7)', '-metadata', 'artist=rareivy',
+      '-c:a', 'libmp3lame', '-id3v2_version', '3', src]);
+    assert.equal(gen.status, 0);
+    const radio = join(dir, 'radio');
+    const r = spawnSync('python3', [POLIR, src, '--radio', radio, '--originais', join(dir, 'orig'), '--json'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    const tags = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format_tags=title,artist,comment', '-of', 'json',
+      join(radio, 'Forró', 'Muzeka - Forró - Que Dia, Que Dia.mp3')], { encoding: 'utf8' });
+    const t = JSON.parse(tags.stdout).format.tags;
+    assert.equal(t.artist, 'Muzeka');
+    assert.equal(t.title, 'Forró - Que Dia, Que Dia');
+    assert.ok(t.comment.startsWith('polido MZK'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
