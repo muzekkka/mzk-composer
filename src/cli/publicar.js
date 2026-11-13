@@ -1,0 +1,145 @@
+// `./mzk publicar`: envia ao AzuraCast as faixas novas ou polidas de ~/Muzeka/radio,
+// pela API (HTTPS). Nunca apaga nada na rádio.
+
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
+
+const CONFIG_DIR = process.env.MZK_CONFIG_DIR || join(homedir(), '.config', 'mzk');
+export const CONFIG_FILE = join(CONFIG_DIR, 'azuracast.env');
+const MANIFEST = join(CONFIG_DIR, 'publicados.json');
+const AUDIO = /\.(mp3|ogg|flac|m4a|aac|wav)$/i;
+
+/** Lê KEY='valor' (formato do assistente). */
+export function readEnv(file) {
+  const env = {};
+  if (!existsSync(file)) return env;
+  for (const line of readFileSync(file, 'utf8').split('\n')) {
+    const m = line.match(/^([A-Z_]+)='(.*)'$/);
+    if (m) env[m[1]] = m[2].replace(/'\\''/g, "'");
+  }
+  return env;
+}
+
+const nfc = (s) => s.normalize('NFC');
+
+/** Arquivos de áudio em <radio>/<Gênero>/: [{ rel, full }]. */
+export function localTracks(radio) {
+  const out = [];
+  for (const dir of readdirSync(radio).sort()) {
+    const d = join(radio, dir);
+    if (dir.startsWith('.') || !statSync(d).isDirectory()) continue;
+    for (const f of readdirSync(d).sort()) {
+      if (AUDIO.test(f) && !f.includes('.tmp.')) out.push({ rel: `${dir}/${f}`, full: join(d, f) });
+    }
+  }
+  return out;
+}
+
+function isPolished(full) {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format_tags=comment', '-of', 'csv=p=0', full], { encoding: 'utf8' });
+  return (r.stdout || '').startsWith('polido MZK');
+}
+
+const sha256 = (full) => createHash('sha256').update(readFileSync(full)).digest('hex');
+
+/**
+ * O que enviar: arquivo ainda não publicado nesta versão (hash diferente do último envio) e
+ * que ou não existe na rádio, ou foi polido aqui. Faixas que vieram da rádio e não foram
+ * mexidas não sobem de novo.
+ */
+export function plan(locals, remotePaths, manifest, { polished = isPolished, hash = sha256 } = {}) {
+  const remote = new Map(remotePaths.map((p) => [nfc(p), p]));
+  const todo = [];
+  for (const t of locals) {
+    const key = nfc(t.rel);
+    const h = hash(t.full);
+    if (manifest[key] === h) continue;
+    const remotePath = remote.get(key);
+    if (remotePath && !polished(t.full)) continue;
+    todo.push({ ...t, hash: h, path: remotePath || t.rel, replace: !!remotePath });
+  }
+  return todo;
+}
+
+async function api(cfg, method, path, body) {
+  const res = await fetch(`${cfg.url}/api${path}`, {
+    method,
+    headers: { 'X-API-Key': cfg.key, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = text.slice(0, 300);
+    try { msg = JSON.parse(text).message || msg; } catch { /* texto puro */ }
+    throw new Error(`AzuraCast respondeu ${res.status}: ${msg}`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+export async function publicar(args) {
+  const opts = { yes: args.includes('--sim'), preview: args.includes('--previa'), only: null };
+  const i = args.indexOf('--so');
+  if (i >= 0) opts.only = nfc(args[i + 1] || '').toLowerCase();
+  const radio = process.env.MZK_RADIO || join(homedir(), 'Muzeka', 'radio');
+  const env = readEnv(CONFIG_FILE);
+  if (!env.AZURACAST_API_KEY) {
+    throw new Error('AzuraCast ainda não configurado. Rode uma vez: ./scripts/configurar-azuracast.sh');
+  }
+  const cfg = { url: env.AZURACAST_URL.replace(/\/$/, ''), station: env.AZURACAST_STATION || '1', key: env.AZURACAST_API_KEY };
+
+  process.stdout.write('Lendo a lista de arquivos da rádio… ');
+  const files = await api(cfg, 'GET', `/station/${cfg.station}/files`);
+  const remotePaths = files.map((f) => f.path).filter(Boolean);
+  console.log(`${remotePaths.length} arquivos.`);
+
+  const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
+  const todo = plan(localTracks(radio), remotePaths, manifest)
+    .filter((t) => !opts.only || nfc(t.rel).toLowerCase().includes(opts.only));
+  if (!todo.length) {
+    console.log('Nada novo para enviar: a rádio já tem tudo o que está em ~/Muzeka/radio.');
+    return 0;
+  }
+  const replaced = todo.filter((t) => t.replace);
+  const added = todo.filter((t) => !t.replace);
+  if (replaced.length) {
+    console.log(`\nSubstituir na rádio (versão polida, mesmo lugar) — ${replaced.length}:`);
+    for (const t of replaced) console.log(`  ↻ ${t.path}`);
+  }
+  if (added.length) {
+    console.log(`\nNovas na rádio — ${added.length}:`);
+    for (const t of added) console.log(`  + ${t.path}`);
+  }
+  console.log('\nNada será apagado na rádio.');
+  if (opts.preview) return 0;
+  if (!opts.yes) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = (await rl.question(`\nEnviar ${todo.length} faixa(s)? [s/N] `)).trim().toLowerCase();
+    rl.close();
+    if (answer !== 's' && answer !== 'sim') {
+      console.log('Nada enviado.');
+      return 0;
+    }
+  }
+
+  mkdirSync(dirname(MANIFEST), { recursive: true });
+  let ok = 0;
+  for (const [i, t] of todo.entries()) {
+    process.stdout.write(`[${i + 1}/${todo.length}] ${t.path} … `);
+    try {
+      const file = readFileSync(t.full).toString('base64');
+      await api(cfg, 'POST', `/station/${cfg.station}/files`, { path: t.path, file });
+      manifest[nfc(t.rel)] = t.hash;
+      writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
+      ok++;
+      console.log('ok');
+    } catch (e) {
+      console.log(`falhou\n    ${e.message}`);
+    }
+  }
+  console.log(`\n${ok} de ${todo.length} enviada(s).`);
+  return ok === todo.length ? 0 : 1;
+}

@@ -120,6 +120,21 @@ O nome precisa seguir `Muzeka - Gênero - Título.mp3`. Saída em `~/Muzeka/radi
 o original fica intacto em `~/Muzeka/originais-suno/<Gênero>/`, e rodar de novo sempre parte
 dele. Precisa de `python3` com `numpy` e `ffmpeg`.
 
+## Publicar no AzuraCast
+
+Uma vez: `./scripts/configurar-azuracast.sh` (cria e testa a chave de API; fica em
+`~/.config/mzk/azuracast.env`, só o seu usuário lê). Depois:
+
+```sh
+./mzk publicar --previa          # só mostra o que subiria
+./mzk publicar                   # mostra a lista e pede confirmação
+./mzk publicar --so Synthwave    # só o que tiver "Synthwave" no caminho
+```
+
+Sobe pela API (HTTPS) o que é novo em `~/Muzeka/radio` ou foi polido aqui; faixas que
+vieram da rádio e não foram mexidas não sobem de novo. Nunca apaga nada na rádio. O que já
+foi enviado fica anotado em `~/.config/mzk/publicados.json`.
+
 ## Testes
 
 ```sh
@@ -148,6 +163,8 @@ npm test
 - `scripts/configurar-github.sh` — assistente de configuração (GitHub, iPhone)
 - `scripts/polir.py` — polidor de faixas do Suno (`./mzk polir`)
 - `scripts/polir.py` — polidor das faixas do Suno (`./mzk polir`)
+- `src/cli/publicar.js` — envio ao AzuraCast (`./mzk publicar`)
+- `scripts/configurar-azuracast.sh` — assistente da chave de API do AzuraCast
 - `scripts/instalar-som.sh` — instala SuperCollider e ffmpeg para o `render`
 - `examples/` — projeto de exemplo
 - `test/` — testes (`node --test`)
