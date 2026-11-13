@@ -35,3 +35,23 @@ test('polir: segura o agudo que cresce no fim e guarda o original', { skip: !rea
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('polir: faixa já na pasta da rádio fica na própria pasta, mesmo se o nome diz outro gênero', { skip: !ready && 'sem ffmpeg/numpy' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mzk-polir-'));
+  try {
+    const radio = join(dir, 'radio');
+    const orig = join(dir, 'orig');
+    const home = join(radio, 'Lounge');
+    spawnSync('mkdir', ['-p', home]);
+    const src = join(home, 'Muzeka - R&B - Faixa.mp3');
+    const gen = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'sine=f=220:d=8', '-ac', '2', '-c:a', 'libmp3lame', src]);
+    assert.equal(gen.status, 0);
+    const r = spawnSync('python3', [POLIR, src, '--radio', radio, '--originais', orig, '--json'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(existsSync(join(orig, 'Lounge', 'Muzeka - R&B - Faixa.mp3')));
+    assert.ok(!existsSync(join(radio, 'R&B')));
+    assert.equal(JSON.parse(r.stdout).file, src);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

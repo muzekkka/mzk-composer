@@ -188,7 +188,13 @@ def targets(path, radio, originals):
     m = GENRE_RE.match(name)
     if not m:
         raise SystemExit(f'Nome fora do padrão "Muzeka - Gênero - Título.mp3": {name}')
-    genre = m.group("genre")
+    # Faixa que já está na pasta da rádio: o gênero é a pasta onde ela mora (o nome pode
+    # dizer outro, ex.: "Muzeka - R&B - …" dentro de Lounge/) e o polido fica no mesmo lugar.
+    parent = os.path.dirname(path)
+    if os.path.dirname(parent) == os.path.abspath(radio):
+        genre = os.path.basename(parent)
+    else:
+        genre = m.group("genre")
     return os.path.join(originals, genre, name), os.path.join(radio, genre, name)
 
 
