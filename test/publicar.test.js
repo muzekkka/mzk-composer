@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { matchRemote, plan, playlistsFor, readEnv } from '../src/cli/publicar.js';
+import { matchRemote, plan, planAll, playlistsFor, readEnv } from '../src/cli/publicar.js';
 
 const MZK = fileURLToPath(new URL('../mzk', import.meta.url));
 
@@ -31,6 +31,24 @@ test('plano: só sobe o que é novo ou foi polido, achando o nome antigo na rád
     ['Funk/funk_-_ne\u0302ga_lo\u0302ra(1).mp3', true],
     ['Synthwave/Muzeka - Synthwave - From Now On.mp3', false],
     ['Synthwave/synthwave_-_menina_do_futuro(1).mp3', true],
+  ]);
+});
+
+test('plano: lista os arquivos da rádio a renomear para o padrão do computador', () => {
+  const locals = [
+    { rel: 'Natal/jingle.mp3', full: 'b' },
+    { rel: 'Spots/Spot 2.mp3', full: 's' },
+    { rel: 'Funk/Muzeka - Funk - Nêga Lôra.mp3', full: 'a' },
+  ];
+  const remote = [
+    { path: 'Natal/jingle.mp3', length: 60 },
+    { path: 'Spots/spot_2.mp3', length: 30 },
+    { path: 'Funk/funk_-_nêga_lôra(1).mp3', length: 178 },
+  ];
+  const { renames } = planAll(locals, remote, {}, { polished: () => false, hash: (f) => f, duration: (f) => ({ b: 60, s: 30, a: 178 })[f] });
+  assert.deepEqual(renames.map((r) => [r.from, r.to]), [
+    ['Spots/spot_2.mp3', 'Spots/Spot 2.mp3'],
+    ['Funk/funk_-_nêga_lôra(1).mp3', 'Funk/Muzeka - Funk - Nêga Lôra.mp3'],
   ]);
 });
 
@@ -95,7 +113,7 @@ test('publicar --sim envia ao AzuraCast (falso) e não reenvia na segunda vez', 
     assert.equal(Buffer.from(uploads[0].file, 'base64').toString(), 'audio-falso');
     assert.ok(JSON.parse(readFileSync(join(cfgDir, 'publicados.json'), 'utf8'))['Lounge/Muzeka - Lounge - Nova.mp3']);
     const second = await run();
-    assert.match(second.out, /Nada novo/);
+    assert.match(second.out, /Nada a fazer/);
     assert.equal(uploads.length, 1);
   } finally {
     server.close();

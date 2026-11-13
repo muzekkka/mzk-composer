@@ -132,7 +132,10 @@ Uma vez: `./scripts/configurar-azuracast.sh` (cria e testa a chave de API; fica 
 ```
 
 Sobe pela API (HTTPS) o que é novo em `~/Muzeka/radio` ou foi polido aqui; faixas que
-vieram da rádio e não foram mexidas não sobem de novo. Nunca apaga nada na rádio. O que já
+vieram da rádio e não foram mexidas não sobem de novo. Faixa nova entra nas playlists das
+vizinhas de pasta. Também renomeia na rádio o que estiver com nome diferente do computador
+(acha o par pelo título e pela duração), para os dois ficarem no mesmo padrão. Nunca apaga
+nada na rádio. O que já
 foi enviado fica anotado em `~/.config/mzk/publicados.json`.
 
 ## Testes

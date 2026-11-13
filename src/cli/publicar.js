@@ -84,28 +84,37 @@ export function matchRemote(rel, duration, remoteFiles, taken) {
 }
 
 /**
- * O que enviar: arquivo ainda não publicado nesta versão (hash diferente do último envio) e
- * que ou não existe na rádio, ou foi polido aqui. Faixas que vieram da rádio e não foram
- * mexidas não sobem de novo. Polida substitui o arquivo da rádio no caminho que ele tem lá.
+ * Plano completo:
+ * - `todo`: o que enviar. Arquivo ainda não publicado nesta versão (hash diferente do último
+ *   envio) e que ou não existe na rádio, ou foi polido aqui. Faixas que vieram da rádio e não
+ *   foram mexidas não sobem de novo. Polida substitui o arquivo da rádio no caminho de lá.
+ * - `renames`: arquivos da rádio com nome diferente do armazenamento local, para alinhar
+ *   (a rádio fica com o mesmo padrão "Gênero/Muzeka - Gênero - Título.mp3").
  */
-export function plan(locals, remoteFiles, manifest, { polished = isPolished, hash = sha256, duration = durationOf } = {}) {
+export function planAll(locals, remoteFiles, manifest, { polished = isPolished, hash = sha256, duration = durationOf } = {}) {
   const exact = new Map(remoteFiles.map((f) => [nfc(f.path), f.path]));
   const taken = new Set(locals.map((t) => exact.get(nfc(t.rel))).filter(Boolean));
   const todo = [];
+  const renames = [];
   for (const t of locals) {
     const key = nfc(t.rel);
-    const h = hash(t.full);
-    if (manifest[key] === h) continue;
     let remotePath = exact.get(key) ?? null;
     if (!remotePath) {
       remotePath = matchRemote(t.rel, duration(t.full), remoteFiles, taken);
-      if (remotePath) taken.add(remotePath);
+      if (remotePath) {
+        taken.add(remotePath);
+        if (!exact.has(key)) renames.push({ rel: t.rel, from: remotePath, to: t.rel });
+      }
     }
+    const h = hash(t.full);
+    if (manifest[key] === h) continue;
     if (remotePath && !polished(t.full)) continue;
     todo.push({ ...t, hash: h, path: remotePath || t.rel, replace: !!remotePath });
   }
-  return todo;
+  return { todo, renames };
 }
+
+export const plan = (...args) => planAll(...args).todo;
 
 /**
  * Playlists para uma faixa nova: as mesmas das outras faixas da pasta na rádio (a mais
@@ -155,32 +164,37 @@ export async function publicar(args) {
   console.log(`${remoteFiles.length} arquivos.`);
 
   const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
-  const todo = plan(localTracks(radio), remoteFiles, manifest)
-    .filter((t) => !opts.only || nfc(t.rel).toLowerCase().includes(opts.only));
-  if (!todo.length) {
-    console.log('Nada novo para enviar: a rádio já tem tudo o que está em ~/Muzeka/radio.');
+  const pick = (t) => !opts.only || nfc(t.rel).toLowerCase().includes(opts.only);
+  const all = planAll(localTracks(radio), remoteFiles, manifest);
+  const todo = all.todo.filter(pick);
+  const renames = all.renames.filter(pick);
+  if (!todo.length && !renames.length) {
+    console.log('Nada a fazer: a rádio já está igual a ~/Muzeka/radio.');
     return 0;
   }
   const replaced = todo.filter((t) => t.replace);
   const added = todo.filter((t) => !t.replace);
   if (replaced.length) {
     console.log(`\nSubstituir na rádio (versão polida, mesmo lugar) — ${replaced.length}:`);
-    for (const t of replaced) {
-      console.log(t.path.normalize('NFC') === t.rel.normalize('NFC') ? `  ↻ ${t.rel}` : `  ↻ ${t.rel}\n      no lugar de: ${t.path}`);
-    }
+    for (const t of replaced) console.log(`  ↻ ${t.rel}`);
   }
   if (added.length) {
     console.log(`\nNovas na rádio — ${added.length}:`);
     for (const t of added) console.log(`  + ${t.path}`);
   }
+  if (renames.length) {
+    console.log(`\nRenomear na rádio, para ficar igual ao computador — ${renames.length}:`);
+    for (const r of renames) console.log(`  ✎ ${r.from}\n      → ${r.to}`);
+  }
   console.log('\nNada será apagado na rádio.');
   if (opts.preview) return 0;
   if (!opts.yes) {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = (await rl.question(`\nEnviar ${todo.length} faixa(s)? [s/N] `)).trim().toLowerCase();
+    const what = [todo.length && `enviar ${todo.length} faixa(s)`, renames.length && `renomear ${renames.length}`].filter(Boolean).join(' e ');
+    const answer = (await rl.question(`\nConfirma ${what}? [s/N] `)).trim().toLowerCase();
     rl.close();
     if (answer !== 's' && answer !== 'sim') {
-      console.log('Nada enviado.');
+      console.log('Nada foi feito.');
       return 0;
     }
   }
@@ -188,7 +202,7 @@ export async function publicar(args) {
   mkdirSync(dirname(MANIFEST), { recursive: true });
   let ok = 0;
   for (const [i, t] of todo.entries()) {
-    process.stdout.write(`[${i + 1}/${todo.length}] ${t.path} … `);
+    process.stdout.write(`[${i + 1}/${todo.length}] ${t.rel} … `);
     try {
       const file = readFileSync(t.full).toString('base64');
       // A rede às vezes tropeça num envio grande: tenta até 3 vezes.
@@ -219,6 +233,18 @@ export async function publicar(args) {
       console.log(`falhou\n    ${e.message}`);
     }
   }
-  console.log(`\n${ok} de ${todo.length} enviada(s).`);
-  return ok === todo.length ? 0 : 1;
+  if (todo.length) console.log(`\n${ok} de ${todo.length} enviada(s).`);
+
+  // Renomeia depois de enviar (o envio usa o nome que o arquivo tinha na rádio).
+  let renamed = 0;
+  for (const r of renames) {
+    try {
+      await api(cfg, 'PUT', `/station/${cfg.station}/files/rename`, { file: r.from, newPath: r.to });
+      renamed++;
+    } catch (e) {
+      console.log(`  não renomeou ${r.from}: ${e.message}`);
+    }
+  }
+  if (renames.length) console.log(`${renamed} de ${renames.length} renomeada(s).`);
+  return ok === todo.length && renamed === renames.length ? 0 : 1;
 }
