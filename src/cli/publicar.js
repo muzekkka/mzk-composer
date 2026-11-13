@@ -46,19 +46,61 @@ function isPolished(full) {
 
 const sha256 = (full) => createHash('sha256').update(readFileSync(full)).digest('hex');
 
+function durationOf(full) {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', full], { encoding: 'utf8' });
+  return Number(r.stdout) || 0;
+}
+
+/** Palavras do título, sem acento, prefixo "Muzeka", "(1)", extensão nem pontuação. */
+export function titleWords(name) {
+  return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/\.[a-z0-9]+$/, '').replace(/\(\d+\)/g, ' ').replace(/\bmuzeka\b|\bby\b/g, ' ')
+    .split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+const MAX_DURATION_DIFF = 2; // s
+const MIN_TITLE_SCORE = 0.5;
+
+/**
+ * Acha na rádio o arquivo que corresponde a uma faixa local de nome diferente (a rádio tem
+ * os nomes de quando foi enviada, ex.: "funk_-_nêga_lôra(1).mp3"): mesma pasta, título
+ * parecido e duração quase igual. Devolve o caminho na rádio ou null.
+ */
+export function matchRemote(rel, duration, remoteFiles, taken) {
+  const [dir, name] = rel.split('/');
+  // O gênero (pasta e o do nome) não conta como título: senão "Lounge - Outra" casaria
+  // com "lounge_-_store".
+  const genre = new Set([...titleWords(dir), ...(/^Muzeka - /i.test(name) ? titleWords(name.split(' - ')[1]) : [])]);
+  const words = new Set(titleWords(name).filter((x) => !genre.has(x)));
+  let best = null;
+  for (const f of remoteFiles) {
+    if (taken.has(f.path) || !nfc(f.path).startsWith(`${nfc(dir)}/`)) continue;
+    if (Math.abs((f.length ?? 0) - duration) > MAX_DURATION_DIFF) continue;
+    const w = titleWords(f.path.slice(f.path.indexOf('/') + 1)).filter((x) => !genre.has(x));
+    const score = w.filter((x) => words.has(x)).length / Math.max(w.length, 1);
+    if (score >= MIN_TITLE_SCORE && (!best || score > best.score)) best = { score, path: f.path };
+  }
+  return best?.path ?? null;
+}
+
 /**
  * O que enviar: arquivo ainda não publicado nesta versão (hash diferente do último envio) e
  * que ou não existe na rádio, ou foi polido aqui. Faixas que vieram da rádio e não foram
- * mexidas não sobem de novo.
+ * mexidas não sobem de novo. Polida substitui o arquivo da rádio no caminho que ele tem lá.
  */
-export function plan(locals, remotePaths, manifest, { polished = isPolished, hash = sha256 } = {}) {
-  const remote = new Map(remotePaths.map((p) => [nfc(p), p]));
+export function plan(locals, remoteFiles, manifest, { polished = isPolished, hash = sha256, duration = durationOf } = {}) {
+  const exact = new Map(remoteFiles.map((f) => [nfc(f.path), f.path]));
+  const taken = new Set(locals.map((t) => exact.get(nfc(t.rel))).filter(Boolean));
   const todo = [];
   for (const t of locals) {
     const key = nfc(t.rel);
     const h = hash(t.full);
     if (manifest[key] === h) continue;
-    const remotePath = remote.get(key);
+    let remotePath = exact.get(key) ?? null;
+    if (!remotePath) {
+      remotePath = matchRemote(t.rel, duration(t.full), remoteFiles, taken);
+      if (remotePath) taken.add(remotePath);
+    }
     if (remotePath && !polished(t.full)) continue;
     todo.push({ ...t, hash: h, path: remotePath || t.rel, replace: !!remotePath });
   }
@@ -93,11 +135,11 @@ export async function publicar(args) {
 
   process.stdout.write('Lendo a lista de arquivos da rádio… ');
   const files = await api(cfg, 'GET', `/station/${cfg.station}/files`);
-  const remotePaths = files.map((f) => f.path).filter(Boolean);
-  console.log(`${remotePaths.length} arquivos.`);
+  const remoteFiles = files.filter((f) => f.path).map((f) => ({ path: f.path, length: f.length }));
+  console.log(`${remoteFiles.length} arquivos.`);
 
   const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
-  const todo = plan(localTracks(radio), remotePaths, manifest)
+  const todo = plan(localTracks(radio), remoteFiles, manifest)
     .filter((t) => !opts.only || nfc(t.rel).toLowerCase().includes(opts.only));
   if (!todo.length) {
     console.log('Nada novo para enviar: a rádio já tem tudo o que está em ~/Muzeka/radio.');
@@ -107,7 +149,9 @@ export async function publicar(args) {
   const added = todo.filter((t) => !t.replace);
   if (replaced.length) {
     console.log(`\nSubstituir na rádio (versão polida, mesmo lugar) — ${replaced.length}:`);
-    for (const t of replaced) console.log(`  ↻ ${t.path}`);
+    for (const t of replaced) {
+      console.log(t.path.normalize('NFC') === t.rel.normalize('NFC') ? `  ↻ ${t.rel}` : `  ↻ ${t.rel}\n      no lugar de: ${t.path}`);
+    }
   }
   if (added.length) {
     console.log(`\nNovas na rádio — ${added.length}:`);

@@ -6,24 +6,40 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { plan, readEnv } from '../src/cli/publicar.js';
+import { matchRemote, plan, readEnv } from '../src/cli/publicar.js';
 
 const MZK = fileURLToPath(new URL('../mzk', import.meta.url));
 
-test('plano: só sobe o que é novo ou foi polido, e respeita a grafia da rádio', () => {
+test('plano: só sobe o que é novo ou foi polido, achando o nome antigo na rádio', () => {
   const locals = [
-    { rel: 'Funk/Muzeka - Funk - Nêga Lôra.mp3', full: 'a' },  // polida, já existe na rádio
-    { rel: 'Natal/jingle.mp3', full: 'b' },                      // veio da rádio, intocada
-    { rel: 'Lo-Fi/Muzeka - Lo-Fi - Nova.mp3', full: 'c' },       // nova
-    { rel: 'Samba/Muzeka - Samba - Já Enviada.mp3', full: 'd' }, // polida e já enviada
+    { rel: 'Funk/Muzeka - Funk - Nêga Lôra.mp3', full: 'a' },          // polida; na rádio com nome antigo
+    { rel: 'Natal/jingle.mp3', full: 'b' },                              // veio da rádio, intocada
+    { rel: 'Synthwave/Muzeka - Synthwave - From Now On.mp3', full: 'c' }, // nova
+    { rel: 'Synthwave/Muzeka - Synthwave - Menina do Futuro.mp3', full: 'e' }, // polida; nome antigo
+    { rel: 'Samba/Muzeka - Samba - Já Enviada.mp3', full: 'd' },         // polida e já enviada
   ];
-  const remote = ['Funk/Muzeka - Funk - Ne\u0302ga Lo\u0302ra.mp3', 'Natal/jingle.mp3', 'Samba/Muzeka - Samba - Já Enviada.mp3'];
+  const remote = [
+    { path: 'Funk/funk_-_ne\u0302ga_lo\u0302ra(1).mp3', length: 178 },
+    { path: 'Natal/jingle.mp3', length: 60 },
+    { path: 'Synthwave/synthwave_-_menina_do_futuro(1).mp3', length: 191 },
+    { path: 'Samba/samba_-_ja_enviada.mp3', length: 100 },
+  ];
+  const durations = { a: 178.6, b: 60, c: 202.8, e: 191.4, d: 100 };
   const manifest = { 'Samba/Muzeka - Samba - Já Enviada.mp3': 'hd' };
-  const todo = plan(locals, remote, manifest, { polished: (f) => f !== 'b', hash: (f) => `h${f}` });
+  const todo = plan(locals, remote, manifest, { polished: (f) => f !== 'b', hash: (f) => `h${f}`, duration: (f) => durations[f] });
   assert.deepEqual(todo.map((t) => [t.path, t.replace]), [
-    ['Funk/Muzeka - Funk - Ne\u0302ga Lo\u0302ra.mp3', true],
-    ['Lo-Fi/Muzeka - Lo-Fi - Nova.mp3', false],
+    ['Funk/funk_-_ne\u0302ga_lo\u0302ra(1).mp3', true],
+    ['Synthwave/Muzeka - Synthwave - From Now On.mp3', false],
+    ['Synthwave/synthwave_-_menina_do_futuro(1).mp3', true],
   ]);
+});
+
+test('correspondência exige título parecido e duração quase igual', () => {
+  const remote = [{ path: 'Lounge/lounge_-_store.mp3', length: 150 }];
+  assert.equal(matchRemote('Lounge/Muzeka - Lounge - Store.mp3', 150.8, remote, new Set()), 'Lounge/lounge_-_store.mp3');
+  assert.equal(matchRemote('Lounge/Muzeka - Lounge - Store.mp3', 160, remote, new Set()), null);
+  assert.equal(matchRemote('Lounge/Muzeka - Lounge - Outra.mp3', 150, remote, new Set()), null);
+  assert.equal(matchRemote('Lo-Fi/Muzeka - Lounge - Store.mp3', 150, remote, new Set()), null);
 });
 
 test('readEnv lê o formato do assistente', () => {
