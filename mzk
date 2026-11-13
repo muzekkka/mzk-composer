@@ -1,22 +1,26 @@
 #!/usr/bin/env node
 // MZK Composer — linha de comando (Linux).
-// Uso: ./mzk build <MZK-0042 | arquivo.json>... [--all] [--dir D] [--out D] [--registrar] [--no-pdf]
+// Uso: ./mzk build|render <MZK-0042 | arquivo.json>... [--all] [--dir D] [--out D] [--registrar] [--no-pdf]
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { homedir, networkInterfaces } from 'node:os';
+import { homedir, networkInterfaces, tmpdir } from 'node:os';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildMidi } from './src/core/midi.js';
 import { buildLilypond } from './src/core/lilypond.js';
-import { fileBaseName, validateProject } from './src/core/project.js';
+import { copyrightLine, fileBaseName, validateProject } from './src/core/project.js';
+import { buildRenderScore } from './src/render/score.js';
+import { buildNrt, loadSynthDefs } from './src/render/nrt.js';
 
 const HELP = `MZK Composer
 
   ./mzk build MZK-0042             gera .mid, .ly e .pdf de um projeto
   ./mzk build caminho/projeto.json  idem, a partir de um arquivo
   ./mzk build --all                todos os projetos do diretório
+  ./mzk render MZK-0042            gera o .mp3 (amostra para o Suno; precisa do SuperCollider)
+  ./mzk render --all               idem, para todos os projetos
   ./mzk serve [--port 8080]        abre o app no navegador (e no iPhone, na mesma rede Wi-Fi)
 
 Opções:
@@ -24,6 +28,7 @@ Opções:
   --out <pasta>     onde gravar (padrão: pasta "exports" ao lado da pasta do projeto)
   --registrar       faz commit dos arquivos gerados e envia ao GitHub (prova datada)
   --no-pdf          não chama o LilyPond (gera só .mid e .ly)
+  --wav             (render) guarda também o .wav sem compressão
   --no-pull         não busca as versões novas do GitHub antes de gerar
 `;
 
@@ -35,6 +40,7 @@ function parseArgs(argv) {
     else if (a === '--registrar') opts.registrar = true;
     else if (a === '--no-pdf') opts.pdf = false;
     else if (a === '--no-pull') opts.pull = false;
+    else if (a === '--wav') opts.wav = true;
     else if (a === '--dir') opts.dir = argv[++i];
     else if (a === '--out') opts.out = argv[++i];
     else if (a.startsWith('--')) throw new Error(`Opção desconhecida: ${a}`);
@@ -92,6 +98,73 @@ function buildOne(jsonPath, opts) {
   console.log(`✓ ${project.meta.id} — ${project.meta.title}`);
   for (const f of files) console.log(`    ${relative(process.cwd(), f) || f}`);
   return { project, files, outDir };
+}
+
+const LOUDNESS = { I: -14, TP: -1, LRA: 11 }; // padrão de streaming
+
+function scsynthCommand() {
+  const bin = process.env.MZK_SCSYNTH || 'scsynth';
+  const probe = spawnSync(bin, ['-v'], { encoding: 'utf8' });
+  if (probe.error) {
+    throw new Error('SuperCollider não encontrado. Instale uma vez com: ./scripts/instalar-som.sh');
+  }
+  const extra = process.env.MZK_SC_PLUGINS ? ['-U', process.env.MZK_SC_PLUGINS] : [];
+  return { bin, extra };
+}
+
+/** .json → .mp3 (SuperCollider sem tempo real + ffmpeg com volume de streaming). */
+function renderOne(jsonPath, opts, sc) {
+  const project = JSON.parse(readFileSync(jsonPath, 'utf8'));
+  const errors = validateProject(project);
+  if (errors.length) throw new Error(`${basename(jsonPath)} é inválido:\n  - ${errors.join('\n  - ')}`);
+  const outDir = resolve(opts.out || join(dirname(dirname(jsonPath)), 'exports'));
+  mkdirSync(outDir, { recursive: true });
+  const base = fileBaseName(project);
+  const score = buildRenderScore(project);
+  const tmp = mkdtempSync(join(tmpdir(), 'mzk-render-'));
+  try {
+    const oscPath = join(tmp, 'score.osc');
+    const wavPath = join(tmp, 'mix.wav');
+    writeFileSync(oscPath, buildNrt(score, loadSynthDefs(join(ROOT, 'sc', 'defs'))));
+    const r = run(sc.bin, [...sc.extra, '-o', '2', '-N', oscPath, '_', wavPath, '48000', 'WAV', 'float']);
+    if (r.status !== 0 || !existsSync(wavPath)) throw new Error(`SuperCollider falhou:\n${(r.stderr || r.stdout).slice(-800)}`);
+
+    // Volume final: loudnorm em duas passadas (mede, depois aplica linear).
+    const target = `I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}`;
+    const m = run('ffmpeg', ['-hide_banner', '-nostats', '-i', wavPath, '-af', `loudnorm=${target}:print_format=json`, '-f', 'null', '-']);
+    if (m.error) throw new Error('ffmpeg não encontrado (sudo apt install ffmpeg).');
+    const json = (m.stderr.match(/\{[\s\S]*?\}/g) || []).pop();
+    if (!json) throw new Error(`ffmpeg não mediu o volume:\n${m.stderr.slice(-500)}`);
+    const mm = JSON.parse(json);
+    const af = `loudnorm=${target}:linear=true:measured_I=${mm.input_i}:measured_TP=${mm.input_tp}`
+      + `:measured_LRA=${mm.input_lra}:measured_thresh=${mm.input_thresh}:offset=${mm.target_offset},aresample=44100`;
+    const meta = project.meta;
+    const tags = {
+      title: meta.title,
+      artist: (meta.composers || []).join(', '),
+      date: String(meta.year),
+      copyright: copyrightLine(meta),
+      comment: `${meta.id} · amostra MZK Composer (${score.pack.name}) · ${project.settings.bpm} bpm`,
+    };
+    const files = [];
+    const mp3Path = join(outDir, `${base}.mp3`);
+    const e = run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', wavPath, '-af', af,
+      ...Object.entries(tags).flatMap(([k, v]) => ['-metadata', `${k}=${v}`]),
+      '-c:a', 'libmp3lame', '-b:a', '320k', '-id3v2_version', '3', mp3Path]);
+    if (e.status !== 0) throw new Error(`ffmpeg falhou ao gerar o mp3:\n${e.stderr}`);
+    files.push(mp3Path);
+    if (opts.wav) {
+      const wavOut = join(outDir, `${base}.wav`);
+      const w = run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', wavPath, '-af', af, '-c:a', 'pcm_s24le', wavOut]);
+      if (w.status !== 0) throw new Error(`ffmpeg falhou ao gerar o wav:\n${w.stderr}`);
+      files.push(wavOut);
+    }
+    const secs = Math.round(score.duration);
+    console.log(`✓ ${meta.id} — ${meta.title}  (${score.pack.name}, ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')})`);
+    for (const f of files) console.log(`    ${relative(process.cwd(), f) || f}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 function registrar({ project, files, outDir }) {
@@ -164,7 +237,7 @@ function main() {
     return 0;
   }
   if (cmd === 'serve') return serve(rest);
-  if (cmd !== 'build') {
+  if (cmd !== 'build' && cmd !== 'render') {
     console.error(`Comando desconhecido: ${cmd}\n\n${HELP}`);
     return 2;
   }
@@ -180,9 +253,14 @@ function main() {
     paths = opts.targets.map((t) => resolveTarget(t, dir));
   }
 
+  const sc = cmd === 'render' ? scsynthCommand() : null;
   let failures = 0;
   for (const p of paths) {
     try {
+      if (sc) {
+        renderOne(p, opts, sc);
+        continue;
+      }
       const result = buildOne(p, opts);
       if (opts.registrar) registrar(result);
     } catch (e) {

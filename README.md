@@ -64,6 +64,29 @@ aparelhos, a versão do aparelho que sincronizar por último fica valendo e a ou
 Antes de gerar, o `build` busca as versões novas do GitHub (`--no-pull` desliga).
 Saída em `exports/`: `MZK-0042_titulo_92bpm_Am.mid`, `.ly` e `.pdf`.
 
+## MP3 para o Suno (amostra)
+
+Instale uma vez o motor de som (pede a senha do Linux):
+
+```sh
+./scripts/instalar-som.sh
+```
+
+Depois:
+
+```sh
+./mzk render MZK-0042        # gera exports/MZK-0042_titulo_92bpm_Am.mp3
+./mzk render --all
+./mzk render MZK-0042 --wav  # também um .wav sem compressão
+```
+
+O mp3 é uma **amostra intermediária** para enviar ao Suno: timbres do pacote de som
+(por enquanto **Synthwave**), levada automática nos acordes, humanização leve,
+volume no padrão de streaming (−14 LUFS) e etiquetas (título, autor, ©). Nada disso
+muda o `.mid` nem o PDF de registro. Os timbres ficam em `sc/synthdefs.scd`
+(SuperCollider); os compilados em `sc/defs/` já vêm prontos — para recompilar:
+`sclang sc/synthdefs.scd` (na pasta do projeto).
+
 ## Testes
 
 ```sh
@@ -81,11 +104,15 @@ npm test
   - `lilypond.js` — gerador de lead sheet
   - `timeline.js` — timeline de notas (reprodução e MIDI)
   - `edit.js` — operações de edição (notas, acordes, seções, roteiro, baixo automático)
+- `src/render/` — mp3: pacotes de som (`packs.js`), partitura de áudio (`score.js`),
+  arquivo para o SuperCollider (`nrt.js`)
+- `sc/` — timbres no SuperCollider (`synthdefs.scd`) e compilados (`defs/`)
 - `app/sync.js` — sincronização com o repositório privado (API do GitHub)
 - `app/` — interface (HTML/CSS/JS puro, sem build)
 - `index.html` — entrada do app
 - `manifest.webmanifest`, `sw.js` — instalação e funcionamento offline
-- `mzk` — linha de comando (`build`, `serve`)
+- `mzk` — linha de comando (`build`, `render`, `serve`)
 - `scripts/configurar-github.sh` — assistente de configuração (GitHub, iPhone)
+- `scripts/instalar-som.sh` — instala SuperCollider e ffmpeg para o `render`
 - `examples/` — projeto de exemplo
 - `test/` — testes (`node --test`)

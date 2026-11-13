@@ -148,14 +148,42 @@ Diretório de projetos: `--dir`, variável `MZK_DIR`, ou
 - App hospedado no GitHub Pages (repositório público `mzk-composer`, só código).
 - Exportar só aparece no desktop.
 
-## 9. Ordem de construção
+## 9. MP3 para o Suno (etapa 5)
+
+Decidido na sabatina de 2026-11-13. O mp3 é uma **amostra intermediária**: deixa
+claras melodia, harmonia e groove; o Suno (plano Pro, envio manual, curadoria do
+autor) transforma no estilo do prompt. Caminho pensado para música eletrônica/beats.
+
+- `./mzk render <ID|arquivo> [--all] [--wav]` → `exports/<base>.mp3`: estéreo,
+  320 kbps, 44,1 kHz, roteiro inteiro + 2 s de cauda, −14 LUFS / −1 dBTP, ID3 com
+  título, compositor(es), ano, © e ID. Sem abrir programa nenhum.
+- Motor: SuperCollider sem tempo real (`scsynth -N`). Synths, bateria sintetizada ou
+  samples gratuitos de licença comercial livre, e instrumentos gravados (Rhodes,
+  piano) quando o pacote pedir. Mixagem automática (reverb, delay, compressão,
+  limitador) + `ffmpeg loudnorm`.
+- **Pacotes de som**: Synthwave (primeiro), depois Lo-Fi, Lounge/Afro House e Neutro
+  (qualquer outro gênero). Cada pacote define timbre, volume, pan e efeitos por
+  trilha e uma levada padrão dos acordes (`pad`, `arp`, `padArp`…).
+- Humanização leve e determinística (mesmo projeto → mesmo mp3).
+- Escolhas no campo opcional `render` do projeto
+  (`{ "pack": "synthwave", "levada": "padArp", "humanize": true, "style": "…" }`),
+  editadas na parte "Som do MP3" da tela Projeto e sincronizadas. O som dentro do
+  app continua o rascunho. **`.mid` e PDF ignoram `render`.**
+- `.suno.txt` (estilo + instrumental + BPM + tom) e um arquivo de dados da obra para
+  a futura skill de prompts.
+
+Ordem: (1) motor + Synthwave + `./mzk render`; (2) "Som do MP3" no app +
+`.suno.txt`; (3) pacotes Lo-Fi, Lounge e Neutro.
+
+## 10. Ordem de construção
 
 1. Núcleo + testes + `./mzk build`.
 2. Editores e áudio.
 3. PWA offline.
 4. Sincronização GitHub + publicação (passo a passo guiado).
+5. MP3 para o Suno (seção 9).
 
-## 10. Fora da v1
+## 11. Fora da v1
 
 Step-entry por teclado, modos, anacruse, quiálteras/swing, grade completa no PDF,
-visão empilhada no desktop, integração direta com SuperCollider.
+visão empilhada no desktop.
