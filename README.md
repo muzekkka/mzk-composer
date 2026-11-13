@@ -87,6 +87,38 @@ muda o `.mid` nem o PDF de registro. Os timbres ficam em `sc/synthdefs.scd`
 (SuperCollider); os compilados em `sc/defs/` já vêm prontos — para recompilar:
 `sclang sc/synthdefs.scd` (na pasta do projeto).
 
+## Polir faixas do Suno
+
+```sh
+./mzk polir "~/Downloads/Muzeka - Synthwave - From Now On.mp3"
+./mzk polir ~/Muzeka/radio/Lounge/*.mp3 --suave
+```
+
+Trata a faixa baixada do Suno: mede a sibilância (5–10 kHz) e o "ar" (10–16 kHz) ao
+longo da música, usa a parte boa da própria faixa como referência e abaixa só o
+excesso (o agudo que o Suno vai piorando depois de uns 2 minutos); um de-esser leve
+pega os picos e o volume vai a −14 LUFS. Níveis: `--suave`, `--medio` (padrão),
+`--forte`. O nome precisa seguir `Muzeka - Gênero - Título.mp3`.
+
+- Resultado: `~/Muzeka/radio/<Gênero>/` (a pasta espelho do AzuraCast).
+- Original: `~/Muzeka/originais-suno/<Gênero>/`, nunca alterado. Rodar de novo parte
+  sempre do original (não acumula tratamento).
+- Precisa de `python3` com `numpy` e `ffmpeg` (já vêm no Ubuntu Studio).
+
+## Polir faixas do Suno
+
+```sh
+./mzk polir ~/Downloads/"Muzeka - Synthwave - From Now On.mp3"
+./mzk polir --suave arquivo.mp3      # ou --forte
+```
+
+Mede a sibilância (5–10 kHz) e o "ar" (10–16 kHz) ao longo da faixa, usa a parte boa da
+própria música como referência e abaixa só o excesso (o Suno costuma ficar mais estridente
+depois de uns 2 minutos). Depois aplica um de-esser leve e o volume de streaming (−14 LUFS).
+O nome precisa seguir `Muzeka - Gênero - Título.mp3`. Saída em `~/Muzeka/radio/<Gênero>/`;
+o original fica intacto em `~/Muzeka/originais-suno/<Gênero>/`, e rodar de novo sempre parte
+dele. Precisa de `python3` com `numpy` e `ffmpeg`.
+
 ## Testes
 
 ```sh
@@ -111,8 +143,10 @@ npm test
 - `app/` — interface (HTML/CSS/JS puro, sem build)
 - `index.html` — entrada do app
 - `manifest.webmanifest`, `sw.js` — instalação e funcionamento offline
-- `mzk` — linha de comando (`build`, `render`, `serve`)
+- `mzk` — linha de comando (`build`, `render`, `polir`, `serve`)
 - `scripts/configurar-github.sh` — assistente de configuração (GitHub, iPhone)
+- `scripts/polir.py` — polidor de faixas do Suno (`./mzk polir`)
+- `scripts/polir.py` — polidor das faixas do Suno (`./mzk polir`)
 - `scripts/instalar-som.sh` — instala SuperCollider e ffmpeg para o `render`
 - `examples/` — projeto de exemplo
 - `test/` — testes (`node --test`)

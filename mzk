@@ -21,6 +21,10 @@ const HELP = `MZK Composer
   ./mzk build --all                todos os projetos do diretório
   ./mzk render MZK-0042            gera o .mp3 (amostra para o Suno; precisa do SuperCollider)
   ./mzk render --all               idem, para todos os projetos
+  ./mzk polir "Muzeka - Gênero - Título.mp3"...
+                                   trata faixas do Suno (sibilância, agudo que piora com o tempo,
+                                   volume) e salva em ~/Muzeka/radio/<Gênero>/; o original fica
+                                   em ~/Muzeka/originais-suno/. Níveis: --suave, --medio (padrão), --forte
   ./mzk serve [--port 8080]        abre o app no navegador (e no iPhone, na mesma rede Wi-Fi)
 
 Opções:
@@ -167,6 +171,21 @@ function renderOne(jsonPath, opts, sc) {
   }
 }
 
+/** Repassa ao polidor em Python (numpy + ffmpeg). */
+function polir(args) {
+  const files = [];
+  let nivel = 'medio';
+  for (const a of args) {
+    if (a === '--suave' || a === '--medio' || a === '--forte') nivel = a.slice(2);
+    else if (a.startsWith('--')) throw new Error(`Opção desconhecida: ${a}`);
+    else files.push(a);
+  }
+  if (!files.length) throw new Error('Informe o(s) arquivo(s) .mp3 do Suno ("Muzeka - Gênero - Título.mp3").');
+  const r = spawnSync('python3', [join(ROOT, 'scripts', 'polir.py'), '--nivel', nivel, ...files], { stdio: 'inherit' });
+  if (r.error) throw new Error('python3 não encontrado.');
+  return r.status ?? 1;
+}
+
 function registrar({ project, files, outDir }) {
   const top = run('git', ['rev-parse', '--show-toplevel'], outDir);
   if (top.status !== 0) throw new Error(`--registrar: ${outDir} não está dentro de um repositório git.`);
@@ -237,6 +256,7 @@ function main() {
     return 0;
   }
   if (cmd === 'serve') return serve(rest);
+  if (cmd === 'polir') return polir(rest);
   if (cmd !== 'build' && cmd !== 'render') {
     console.error(`Comando desconhecido: ${cmd}\n\n${HELP}`);
     return 2;

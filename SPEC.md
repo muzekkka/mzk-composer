@@ -175,6 +175,23 @@ autor) transforma no estilo do prompt. Caminho pensado para música eletrônica/
 Ordem: (1) motor + Synthwave + `./mzk render`; (2) "Som do MP3" no app +
 `.suno.txt`; (3) pacotes Lo-Fi, Lounge e Neutro.
 
+### Polir (`./mzk polir`)
+
+Pós-tratamento das faixas baixadas do Suno, decidido em 2026-11-13. Correção lenta por
+análise (STFT): mede 5–10 kHz e 10–16 kHz relativos ao total (energia suavizada em 3 s),
+referência = percentil 75 da parte boa (10–50% da faixa), corta só o excesso (folga e corte
+máximo por nível), com transições em cosseno; depois `deesser` e `loudnorm` (−14 LUFS,
+−1 dBTP), mp3 320 kbps com capa e etiquetas do original. Original guardado em
+`~/Muzeka/originais-suno/<Gênero>/`; resultado em `~/Muzeka/radio/<Gênero>/`.
+
+### Polir (`./mzk polir`)
+
+Trata a faixa baixada do Suno sem abrir programa: correção lenta da sibilância (5–10 kHz) e do
+"ar" (10–16 kHz) contra a referência da parte boa da própria faixa (percentil 75 entre 10% e
+50% da duração), de-esser leve, −14 LUFS / −1 dBTP, mp3 320 kbps com capa e etiquetas.
+Níveis `--suave`, `--medio` (padrão), `--forte`. Saída em `~/Muzeka/radio/<Gênero>/`, original
+guardado em `~/Muzeka/originais-suno/<Gênero>/` e sempre usado como fonte.
+
 ## 10. Ordem de construção
 
 1. Núcleo + testes + `./mzk build`.
