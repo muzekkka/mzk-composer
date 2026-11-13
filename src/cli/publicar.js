@@ -191,7 +191,17 @@ export async function publicar(args) {
     process.stdout.write(`[${i + 1}/${todo.length}] ${t.path} … `);
     try {
       const file = readFileSync(t.full).toString('base64');
-      await api(cfg, 'POST', `/station/${cfg.station}/files`, { path: t.path, file });
+      // A rede às vezes tropeça num envio grande: tenta até 3 vezes.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await api(cfg, 'POST', `/station/${cfg.station}/files`, { path: t.path, file });
+          break;
+        } catch (e) {
+          if (attempt >= 3 || !/fetch failed|ECONNRESET|socket/i.test(`${e.message} ${e.cause?.code ?? ''}`)) throw e;
+          process.stdout.write('(tentando de novo) ');
+          await new Promise((r) => setTimeout(r, 3000 * attempt));
+        }
+      }
       if (!t.replace) {
         const ids = playlistsFor(t.path, remoteFiles);
         if (ids.length) {
